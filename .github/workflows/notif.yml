@@ -1,32 +1,39 @@
-# This is a basic workflow to help you get started with Actions
+name: PR Feishu Notification
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
-  push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+    types: [opened, closed]
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   notify:
+    # 仅在 PR 被创建（opened）或被合并（closed && merged）时通知
+    if: github.event.action == 'opened' || (github.event.action == 'closed' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - name: Compose message variables
+        id: vars
+        run: |
+          if [ "${{ github.event.action }}" = "opened" ]; then
+            echo "title=🆕 新 Pull Request 已创建" >> "$GITHUB_OUTPUT"
+            echo "status=Opened" >> "$GITHUB_OUTPUT"
+          else
+            echo "title=✅ Pull Request 已合并" >> "$GITHUB_OUTPUT"
+            echo "status=Merged" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Send Feishu Notification
-        uses: XRSec/feishu-bot-webhook-action@v1 # 或使用其他飞书通知 Action
+        uses: XRSec/feishu-bot-webhook-action@v1
         with:
           FEISHU_BOT_WEBHOOK: ${{ secrets.FEISHU_BOT_WEBHOOK }}
           MSG_TEXT: |
-            ## 部署完成！🎉
-            
-            **项目**: ${{ github.repository }}
-            **事件**: ${{ github.event_name }}
-            **操作者**: ${{ github.actor }}
-            **分支**: ${{ github.ref_name }}
+            ## ${{ steps.vars.outputs.title }}
+
+            **仓库**: [${{ github.repository }}](${{ github.server_url }}/${{ github.repository }})
+            **PR**: [#${{ github.event.pull_request.number }} ${{ github.event.pull_request.title }}](${{ github.event.pull_request.html_url }})
+            **状态**: ${{ steps.vars.outputs.status }}
+            **作者**: [${{ github.event.pull_request.user.login }}](${{ github.event.pull_request.user.html_url }})
+            **分支**: `${{ github.event.pull_request.head.ref }}` → `${{ github.event.pull_request.base.ref }}`
+            **变更**: +${{ github.event.pull_request.additions }} / -${{ github.event.pull_request.deletions }}（${{ github.event.pull_request.changed_files }} 个文件）
+
+            👉 [点击查看 PR 详情](${{ github.event.pull_request.html_url }})
