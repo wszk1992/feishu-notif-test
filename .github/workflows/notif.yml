@@ -21,10 +21,8 @@ jobs:
       - name: Send Feishu Notification
         uses: XRSec/feishu-bot-webhook-action@v1 # 或使用其他飞书通知 Action
         with:
-          FEISHU_BOT_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
-          title: 'GitHub 通知'
-          msg_type: 'post'
-          content: |
+          FEISHU_BOT_WEBHOOK: ${{ secrets.FEISHU_BOT_WEBHOOK }}
+          MSG_TEXT: |
             ## 部署完成！🎉
             
             **项目**: ${{ github.repository }}
